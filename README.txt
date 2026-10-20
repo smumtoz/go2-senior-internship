@@ -1,3 +1,10 @@
+COMPLETE ARTIFACTS
+Download and unzip go2-senior-submission.zip from this repository. It contains
+all 52 experiment files, including the three checkpoint/video directories,
+resolved configurations, original TensorBoard logs, and reproduction scripts.
+The notebook, report and comparison plot are also available directly here.
+Archive SHA256: 741feb369c1159346aa240139cd4a049f797ca5925c05ba32549ab39299851a0
+
 Unitree Go2: senior-track locomotion experiments
 20 October 2026
 
