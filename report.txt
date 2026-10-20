@@ -1,0 +1,35 @@
+Unitree Go2 flat-terrain velocity tracking
+Senior track experiment report — 20 October 2026
+
+Setup
+Isaac Lab revision 5ffd3d5ac0b4d77d31ea820930a8f5fcac673d87; Newton MuJoCo-Warp physics; RSL-RL PPO; Google Colab Tesla T4 (15 GB); seed 42. All runs used the default 4096 environments, 24 rollout steps per iteration, and default task/reward/PPO settings. Both wide runs started from fresh initialization. The longer run used 900 iterations, three times the default 300.
+
+1. Prediction recorded before training
+I expected widening both linear command axes from [-1, 1] to [-2, 2] m/s to increase planar tracking error and lower command-tracking success at the same iteration budget. Harder commands would occupy more of the training distribution, while fewer samples would fall within the original easier range. I thought base-contact terminations might increase if higher requested speeds destabilized the gait. I expected additional iterations to help if insufficient learning experience was the main limitation. The original prediction is preserved in pretraining-notes.txt and the notebook.
+
+2. What actually happened
+The table shows the arithmetic mean of the last 30 logged observations of each TensorBoard scalar, without smoothing. Each scalar had 300, 300, or 900 observations respectively.
+
+Run            Iterations  XY error m/s   Success    Base contact*
+Baseline        300      0.252       93.51%      12.51%
+Wide            300      1.490        1.55%       9.76%
+Wide, longer    900      1.486        1.12%       5.07%
+
+Baseline commands were [-1, 1] m/s on x and y. Both wide runs used [-2, 2] m/s on x and y. The angular range remained [-1, 1] rad/s. Saved resolved configurations verify these values; no curriculum changed the command ranges.
+
+The prediction about tracking error and success was supported. The base-contact prediction was contradicted: the logged contact indicator fell instead of rising. Lower contact alone therefore did not imply better locomotion or command tracking. I had placed too much emphasis on instability as the likely failure mechanism.
+
+The 20-second Newton recordings show more translation in the baseline, while the wide policies remain much nearer their starting positions despite nonzero command arrows. This supports a conservative-behavior interpretation, although these short clips are illustrative rather than a quantitative evaluation.
+
+3. Did more iterations fix it?
+No. Tracking error remained approximately 1.49 m/s after 900 iterations, and success remained around 1%. Contact decreased further, but the velocity-tracking problem persisted. This experiment does not support the simple explanation that the policy only needed three times the default training budget. It does not rule out benefits from different exploration, a curriculum, reward changes, other seeds, or a much larger budget, and it does not establish a physical speed limit.
+
+A plausible explanation is a conservative local optimum under the unchanged reward. The default planar tracking term uses exp(-error_squared / 0.25). Its unweighted value is about 0.018 at 1 m/s error and 0.00000011 at 2 m/s error, so large errors provide very little tracking reward. This is a hypothesis consistent with the results, not a tested causal finding.
+
+Metric definitions and limits
+error_vel_xy is episode-mean planar velocity-error magnitude. success_rate requires episode-mean planar error below 0.5 m/s and yaw error below 0.4 rad/s. *The base-contact metric is the upstream logged mean of each environment's latest termination indicator; it is not an independently estimated per-episode failure probability. These are training-distribution metrics, not evaluation on a shared command distribution. One seed per condition was used; the final-window observations are correlated and are not independent replications. Full curves and original event files accompany this report.
+
+Source for command ranges and reward width:
+https://github.com/isaac-sim/IsaacLab/blob/5ffd3d5ac0b4d77d31ea820930a8f5fcac673d87/source/isaaclab_tasks/isaaclab_tasks/core/velocity/velocity_env_cfg.py
+Reward implementation:
+https://github.com/isaac-sim/IsaacLab/blob/5ffd3d5ac0b4d77d31ea820930a8f5fcac673d87/source/isaaclab/isaaclab/envs/mdp/rewards.py
